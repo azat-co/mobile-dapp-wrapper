@@ -6,12 +6,13 @@
 
 var httpBridge = require('react-native-http-bridge');
 import React, { Component } from 'react';
+import WKWebView from 'react-native-wkwebview-reborn';
+import web3 from  './lib/web3.min.js';
 import {
   AppRegistry,
   StyleSheet,
   Text,
   View,
-  WebView,
 } from 'react-native';
 
 export default class ethereumwrapper extends Component {
@@ -19,47 +20,89 @@ export default class ethereumwrapper extends Component {
     let jsCode = `
         var MasonProvider = function(){};
         MasonProvider.prototype.prepareRequest = function (async) {
-          window.postMessage("prepareRequest:" + async.to_json);
-          return null;
+          return infuraProvider.prepareRequest(async);
         };
 
         MasonProvider.prototype.send = function (payload) {
-          window.postMessage("send:" + payload.to_json);
-          return "";
+          console.log(payload)
+
+          var method = payload.method;
+          if (method == "eth_accounts") {
+            res = payload
+            delete res.params
+            res.result = ['0x62B0CEC940868DD31f5FC514DFc139155F729F0e']
+
+            console.log(res);
+            return res
+          } else {
+            return infuraProvider.send(payload);
+          }
         };
 
         MasonProvider.prototype.sendAsync = function (payload, callback) {
-          console.log(typeof payload);
-          window.postMessage(JSON.stringify(payload));
-          // window.postMessage("sendAsync:" + payload.to_json);
+          console.log(payload);
+          var method = payload.method;
+
+          if (method == "eth_accounts") {
+            res = payload
+            delete res.params
+            res.result = ['0x62B0CEC940868DD31f5FC514DFc139155F729F0e']
+
+            console.log(res);
+            callback(null, res)
+
+          } else if (method == "eth_call) {
+            window.masonCallbacks[payload.id] = callback;
+            window.webkit.messageHandlers.reactNative.postMessage({data: payload});
+
+          } else {
+            infuraProvider.sendAsync(payload, (error, response) => callback(error, response));
+          }
         };
 
         MasonProvider.prototype.isConnected = function () {
           return true
         };
 
+        window.masonCallbackHub = function(payload) {
+          let id = payload.id
+          let result = payload.result
+
+          console.log(payload);
+          window.masonCallbacks[id](null, result);
+        }
+
+        window.masonCallbacks = {}
+        let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
         var web3 = new Web3(new MasonProvider);
+        web3.eth.defaultAccount = '0x62B0CEC940868DD31f5FC514DFc139155F729F0e'
     `;
     return jsCode;
   }
 
   onMessage( event ) {
-    console.log("On Message", event.nativeEvent.data );
-  }
+    let payload = event.body.data;
+    let method = payload.method;
+    let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
 
-  // componentWillMount(){
-  //
-  //   // initalize the server (now accessible via localhost:1234)
-  //   httpBridge.start(1234, "test", function(request) {
-  //     console.log(request);
-  //   });
-  //
-  // }
+    // if (method == "eth_accounts") {
+    //   res = payload
+    //   delete res.params
+    //   res.result = ['0x62B0CEC940868DD31f5FC514DFc139155F729F0e']
+    // }
+
+    if (method == "eth_call") {
+
+      infuraProvider.sendAsync(payload, (e) => console.log(e));
+      this.refs.webview.evaluateJavaScript('receivedMessageFromReactNative("Hello from the other side.")');
+    }
+  }
 
   render() {
     console.log("hello");
     return (
-      <WebView
+      <WKWebView
+        ref="webview"
         source={{uri: 'http://127.0.0.1:8080'}}
         injectedJavaScript={this.web3override()}
         style={{marginTop: 20}}
