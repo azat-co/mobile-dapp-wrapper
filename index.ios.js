@@ -7,6 +7,7 @@
 var httpBridge = require('react-native-http-bridge');
 import React, { Component } from 'react';
 import WKWebView from 'react-native-wkwebview-reborn';
+import Transaction from 'ethereumjs-tx';
 import web3 from  './lib/web3.min.js';
 import {
   AppRegistry,
