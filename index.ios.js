@@ -4,7 +4,6 @@
  * @flow
  */
 
-var httpBridge = require('react-native-http-bridge');
 import React, { Component } from 'react';
 import WKWebView from 'react-native-wkwebview-reborn';
 import './shim.js';
@@ -15,10 +14,29 @@ import {
   AppRegistry,
   StyleSheet,
   Text,
+  Image,
   View,
+  Modal,
+  TouchableHighlight,
 } from 'react-native';
+import { Header, FormLabel, FormInput, Button } from 'react-native-elements';
 
 export default class ethereumwrapper extends Component {
+  state = {
+    welcomeVisible: true,
+    transactiontransactionModalVisible: false,
+  }
+
+
+  setWelcomeVisible(visible) {
+    this.setState({setWelcomeVisible: visible});
+  }
+
+
+  setTransactionModalVisible(visible) {
+    this.setState({transactionModalVisible: visible});
+  }
+
   web3override() {
     let jsCode = `
         var MasonProvider = function(){};
@@ -96,6 +114,7 @@ export default class ethereumwrapper extends Component {
         ctx.refs.webview.evaluateJavaScript('masonCallbackHub(' + JSON.stringify(payload) + ')');
       }
 
+      ctx.setTransactionModalVisible(true);
       console.log(event);
       let payload = event.body.data;
       let method = payload ? payload.method : null;
@@ -154,13 +173,90 @@ export default class ethereumwrapper extends Component {
 
   render() {
     return (
-      <WKWebView
-        ref="webview"
-        source={{uri: 'http://127.0.0.1:8080'}}
-        injectedJavaScript={this.web3override()}
-        style={{marginTop: 20}}
-        onMessage={this.onMessage(this)}
-      />
+      <View style={{ flex: 1}}
+      backgroundColor="orange"
+
+      >
+        <Modal
+            animationType="slide"
+            transparent={false}
+            style={{ flex: 1}}
+            visible={this.state.welcomeVisible}
+            onRequestClose={() => {alert("Modal has been closed.")}}
+            >
+           <View
+           backgroundColor="orange"
+           >
+            <View style={{ flex: 1}}>
+              <Header
+                backgroundColor="orange"
+                centerComponent={{ text: 'Create Account', style: { color: '#fff'
+               } }}
+              />
+            </View>
+
+            <View style={{
+              marginTop: 160,
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <Image
+              source={require('./img/fid.png')}
+            />
+            <Text style={{color: 'white', fontWeight: 'bold'}}>Friend in Debt</Text>
+
+              <Button
+                raised
+                icon={{name: 'play-arrow'}}
+                title='Create Account'
+                style={{marginTop: 20}}
+                backgroundColor="orange"/>
+            </View>
+
+           </View>
+          </Modal>
+        <Modal
+            animationType="slide"
+            transparent={false}
+            visible={this.state.transactionModalVisible}
+            onRequestClose={() => {alert("Modal has been closed.")}}
+            >
+           <View>
+            <View>
+              <Header
+                backgroundColor="orange"
+                centerComponent={{ text: 'SEND TRANSACTION', style: { color: '#fff' } }}
+                rightComponent={{ icon: 'close', color: '#fff', onPress: () => {
+                  this.setTransactionModalVisible(!this.state.transactionModalVisible)}}}
+              />
+            </View>
+
+            <View style={{marginTop: 60}}>
+              <FormLabel>Gas</FormLabel>
+              <FormInput/>
+
+              <FormLabel>Gas Price</FormLabel>
+              <FormInput/>
+
+              <Button
+                raised
+                icon={{name: 'send'}}
+                title='SUBMIT'
+                style={{marginTop: 20}}
+                backgroundColor="orange"/>
+            </View>
+
+           </View>
+          </Modal>
+
+        <WKWebView
+          ref="webview"
+          source={{uri: 'http://127.0.0.1:8080'}}
+          injectedJavaScript={this.web3override()}
+          onMessage={this.onMessage(this)}
+        />
+      </View>
     );
   }
 }

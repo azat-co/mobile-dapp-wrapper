@@ -3,11 +3,12 @@ package com.ethereumwrapper;
 import android.app.Application;
 
 import com.facebook.react.ReactApplication;
-import me.alwx.HttpServer.HttpServerReactPackage;
+import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
+import android.webkit.WebView;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,7 +25,7 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
-            new HttpServerReactPackage()
+            new VectorIconsPackage()
       );
     }
   };
@@ -37,6 +38,7 @@ public class MainApplication extends Application implements ReactApplication {
   @Override
   public void onCreate() {
     super.onCreate();
+    WebView.setWebContentsDebuggingEnabled(true);
     SoLoader.init(this, /* native exopackage */ false);
   }
 }
