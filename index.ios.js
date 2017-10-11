@@ -8,6 +8,7 @@ import React, { Component } from 'react';
 import WKWebView from 'react-native-wkwebview-reborn';
 import './shim.js';
 import Signer from 'ethjs-signer';
+import Account from 'ethjs-account';
 import web3 from  './lib/web3.min.js';
 import BN from 'bignumber.js';
 import {
@@ -25,8 +26,8 @@ export default class ethereumwrapper extends Component {
   state = {
     welcomeVisible: true,
     transactiontransactionModalVisible: false,
+    account: Account.generate('ifsdahiodfsihisdfhi;sf;hosdafhiudfsahiusdfa'),
   }
-
 
   setWelcomeVisible(visible) {
     this.setState({setWelcomeVisible: visible});
@@ -51,7 +52,7 @@ export default class ethereumwrapper extends Component {
           if (method == "eth_accounts") {
             res = payload
             delete res.params
-            res.result = ['0x62B0CEC940868DD31f5FC514DFc139155F729F0e']
+            res.result = ['${this.state.account.address}']
 
             console.log(res);
             return res
@@ -67,7 +68,7 @@ export default class ethereumwrapper extends Component {
           if (method == "eth_accounts") {
             res = payload
             delete res.params
-            res.result = ['0x62B0CEC940868DD31f5FC514DFc139155F729F0e']
+            res.result = ['${this.state.account.address}']
 
             console.log(res);
             callback(null, res)
@@ -100,7 +101,7 @@ export default class ethereumwrapper extends Component {
         window.masonCallbacks = {};
         let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
         var web3 = new Web3(new MasonProvider);
-        web3.eth.defaultAccount = '0x62B0CEC940868DD31f5FC514DFc139155F729F0e'
+        web3.eth.defaultAccount = '${this.state.account.address}'
     `;
     return jsCode;
   }
@@ -173,14 +174,14 @@ export default class ethereumwrapper extends Component {
 
   render() {
     return (
-      <View style={{ flex: 1}}
-      backgroundColor="orange"
+      <View
+      style={{flex: 1, backgroundColor: 'orange'}}
 
       >
         <Modal
             animationType="slide"
             transparent={false}
-            style={{ flex: 1}}
+            style={{flex: 1, margin: 0, backgroundColor: 'orange'}}
             visible={this.state.welcomeVisible}
             onRequestClose={() => {alert("Modal has been closed.")}}
             >
@@ -210,8 +211,8 @@ export default class ethereumwrapper extends Component {
                 raised
                 icon={{name: 'play-arrow'}}
                 title='Create Account'
-                style={{marginTop: 20}}
-                backgroundColor="orange"/>
+                style={{marginTop: 120, marginBottom: 300}}
+                backgroundColor="black"/>
             </View>
 
            </View>

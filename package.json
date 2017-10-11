@@ -10,6 +10,7 @@
     "assert": "^1.4.1",
     "bignumber.js": "^4.0.2",
     "buffer": "^5.0.7",
+    "ethjs-account": "^0.1.4",
     "ethjs-signer": "^0.1.1",
     "react": "16.0.0-alpha.12",
     "react-native": "0.47.1",
