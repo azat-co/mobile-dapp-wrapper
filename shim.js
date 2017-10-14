@@ -20,3 +20,10 @@ process.env['NODE_ENV'] = isDev ? 'development' : 'production'
 if (typeof localStorage !== 'undefined') {
   localStorage.debug = isDev ? '*' : ''
 }
+
+global.crypto = require('crypto')
+global.crypto.getRandomValues = function(byteArray) {
+  for (let i = 0; i < byteArray.length; i++) {
+    byteArray[i] = Math.floor(256 * Math.random());
+  }
+}

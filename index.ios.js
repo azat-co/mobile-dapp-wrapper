@@ -13,6 +13,7 @@ import web3 from  './lib/web3.min.js';
 import BN from 'bignumber.js';
 import {
   AppRegistry,
+  AsyncStorage,
   StyleSheet,
   Text,
   Image,
@@ -24,13 +25,55 @@ import { Header, FormLabel, FormInput, Button } from 'react-native-elements';
 
 export default class ethereumwrapper extends Component {
   state = {
-    welcomeVisible: true,
-    transactiontransactionModalVisible: false,
-    account: Account.generate('ifsdahiodfsihisdfhi;sf;hosdafhiudfsahiusdfa'),
+    welcomeVisible: false,
+    transactionModalVisible: false,
+    account: "",
+    uri: "http://127.0.0.1:8080",
+    currentGasUnit: '806458',
+    currentGasPrice: '10000000000',
+    privateKey: "",
+    currentRawTx: "",
+    currentTag: "",
+    currentPayloadId: "",
+  }
+
+  createAccount() {
+    let account = Account.generate('ifsdahiodfsihisdfhi;sf;hosdafhiudfsahiusdfa');
+    try {
+      // AsyncStorage.setItem('@securestore:walletaddress', account.address);
+      // AsyncStorage.setItem('@securestore:walletprivateKey', account.privateKey);
+      // AsyncStorage.setItem('@securestore:walletpublicKey', account.publicKey);
+
+      AsyncStorage.setItem('@securestore:walletaddress', "0x62B0CEC940868DD31f5FC514DFc139155F729F0e");
+      AsyncStorage.setItem('@securestore:walletprivateKey', '0x4e5f4d51720f8a7629f76483efdd548025a861c4d2d0f614c183fe69d4a77ed3');
+      this.setState({account: account.address,
+                     uri: "http://127.0.0.1:8080"
+      });
+      console.log("account created: ");
+      console.log(this.state.account);
+      this.setWelcomeVisible(false);
+      this.setState(this.state);
+    } catch (error) {
+      console.log(error)
+      // Error saving data
+    }
+  }
+
+  resetAccount() {
+    try {
+      AsyncStorage.removeItem('@securestore:walletaddress');
+      AsyncStorage.removeItem('@securestore:walletprivateKey');
+      AsyncStorage.removeItem('@securestore:walletpublicKey');
+      this.setState({account: ""});
+      console.log("account cleared");
+    } catch (error) {
+      console.log(error)
+      // Error saving data
+    }
   }
 
   setWelcomeVisible(visible) {
-    this.setState({setWelcomeVisible: visible});
+    this.setState({welcomeVisible: visible});
   }
 
 
@@ -38,7 +81,7 @@ export default class ethereumwrapper extends Component {
     this.setState({transactionModalVisible: visible});
   }
 
-  web3override() {
+  web3override(address) {
     let jsCode = `
         var MasonProvider = function(){};
         MasonProvider.prototype.prepareRequest = function (async) {
@@ -52,7 +95,7 @@ export default class ethereumwrapper extends Component {
           if (method == "eth_accounts") {
             res = payload
             delete res.params
-            res.result = ['${this.state.account.address}']
+            res.result = ['${address}']
 
             console.log(res);
             return res
@@ -68,7 +111,7 @@ export default class ethereumwrapper extends Component {
           if (method == "eth_accounts") {
             res = payload
             delete res.params
-            res.result = ['${this.state.account.address}']
+            res.result = ['${address}']
 
             console.log(res);
             callback(null, res)
@@ -101,7 +144,8 @@ export default class ethereumwrapper extends Component {
         window.masonCallbacks = {};
         let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
         var web3 = new Web3(new MasonProvider);
-        web3.eth.defaultAccount = '${this.state.account.address}'
+        web3.eth.defaultAccount = '${address}'
+        alert(web3.eth.defaultAccount);
     `;
     return jsCode;
   }
@@ -110,113 +154,93 @@ export default class ethereumwrapper extends Component {
     return function(event){
         console.log(event);
 
-      function sendToWebview(payload) {
-        console.log(payload);
-        ctx.refs.webview.evaluateJavaScript('masonCallbackHub(' + JSON.stringify(payload) + ')');
-      }
-
       ctx.setTransactionModalVisible(true);
       console.log(event);
       let payload = event.body.data;
       let method = payload ? payload.method : null;
-      let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
-      let web3 = new Web3(infuraProvider);
-      const eth = web3.eth;
-      const sign = Signer.sign;
-
-      const address = '0x62B0CEC940868DD31f5FC514DFc139155F729F0e';
-      const privateKey = '0x4e5f4d51720f8a7629f76483efdd548025a861c4d2d0f614c183fe69d4a77ed3';
 
       var nonce;
       if (method == "eth_sendTransaction") {
-        eth.getTransactionCount(address,(err, res) => {
-          var rawTx, tag;
-          [rawTx, tag] = payload.params;
+        var rawTx, tag;
+        [rawTx, tag] = payload.params;
 
-          nonce = res;
-          completeTx = {
-            to: rawTx.to,
-            value: rawTx.value,
-            gas: new BN('806458'),
-            data: rawTx.data,
-            // when sending a raw transactions it's necessary to set the gas price, currently 0.00000002 ETH
-            gasPrice: new BN('10000000000'),
-            nonce: nonce,
-          };
-
-          console.log('complete tx', completeTx);
-          console.log('signedtx', sign(completeTx, privateKey));
-          eth.sendRawTransaction(sign(completeTx, privateKey), (error, txHash) => {
-            console.log('Transaction Hash', txHash);
-            console.log('tx error', error);
-            sendToWebview({id: payload.id, result: txHash});
-          });
-        });
+        ctx.setState({currentRawTx: rawTx, currentTag: tag, currentPayloadId: payload.id});
       }
-
-        // var rawTx, tag, signedTx;
-        // [rawTx, tag] = payload.params;
-        // rawTx.gas = 4476768;
-        // rawTx.gasPrice = 1;
-        // rawTx.value = 0;
-        //
-        // signedTx = Signer.sign(rawTx, '');
-        // payload.params = [signedTx, tag];
-        //
-        // console.log(payload);
-        // infuraProvider.sendAsync(payload, (err, res) => {
-        //   console.log(err);
-        //   sendToWebview(res);
-        // });
-      // }
     }
   }
 
+  componentWillMount() {
+    try {
+      // this.resetAccount();
+      // this.createAccount();
+
+      AsyncStorage.getItem('@securestore:walletaddress').then((address) => {
+        AsyncStorage.getItem('@securestore:walletprivateKey').then((key) => {
+          if (address !== null && key !== null){
+            console.log('got result:')
+            console.log(address)
+            this.setState({account: address, privateKey: key});
+            console.log("set account state");
+            this.setWelcomeVisible(false);
+          } else {
+            console.log("account value not found")
+          }
+        });
+      });
+    } catch (error) {
+      console.log("error retrieving wallet")
+      console.log(error)
+    }
+  }
   render() {
     return (
       <View
       style={{flex: 1, backgroundColor: 'orange'}}
-
       >
-        <Modal
-            animationType="slide"
-            transparent={false}
-            style={{flex: 1, margin: 0, backgroundColor: 'orange'}}
-            visible={this.state.welcomeVisible}
-            onRequestClose={() => {alert("Modal has been closed.")}}
-            >
-           <View
-           backgroundColor="orange"
-           >
-            <View style={{ flex: 1}}>
-              <Header
-                backgroundColor="orange"
-                centerComponent={{ text: 'Create Account', style: { color: '#fff'
-               } }}
-              />
-            </View>
-
-            <View style={{
-              marginTop: 160,
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-            <Image
-              source={require('./img/fid.png')}
+      <Modal
+          animationType="slide"
+          transparent={false}
+          style={{flex: 1, margin: 0, backgroundColor: 'orange'}}
+          visible={this.state.welcomeVisible}
+          onRequestClose={() => {alert("Modal has been closed.")}}
+          >
+         <View
+         backgroundColor="orange"
+         >
+          <View style={{ flex: 1}}>
+            <Header
+              backgroundColor="orange"
+              centerComponent={{ text: 'Create Account', style: { color: '#fff'
+             } }}
             />
-            <Text style={{color: 'white', fontWeight: 'bold'}}>Friend in Debt</Text>
+          </View>
 
-              <Button
-                raised
-                icon={{name: 'play-arrow'}}
-                title='Create Account'
-                style={{marginTop: 120, marginBottom: 300}}
-                backgroundColor="black"/>
-            </View>
+          <View style={{
+            marginTop: 160,
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <Image
+            source={require('./img/fid.png')}
+          />
+          <Text style={{color: 'white', fontWeight: 'bold'}}>Friend in Debt</Text>
 
-           </View>
-          </Modal>
+          <Text style={{color: 'white', marginTop: 60}}>Welcome!</Text>
+          <Text style={{color: 'white'}}>A new wallet will be generated for you...</Text>
+
+            <Button
+              onPress={() => {
+                this.createAccount();
+              }}
+              icon={{name: 'play-arrow'}}
+              title='Create Account'
+              style={{marginTop: 120, marginBottom: 300}}
+              backgroundColor="black"/>
+          </View>
+
+         </View>
+        </Modal>
         <Modal
             animationType="slide"
             transparent={false}
@@ -235,13 +259,21 @@ export default class ethereumwrapper extends Component {
 
             <View style={{marginTop: 60}}>
               <FormLabel>Gas</FormLabel>
-              <FormInput/>
+              <FormInput
+                onChangeText={(amount) => this.setState({currentGasUnit: amount})}
+                value={this.state.currentGasUnit}
+              />
 
               <FormLabel>Gas Price</FormLabel>
-              <FormInput/>
+              <FormInput
+                onChangeText={(amount) => this.setState({currentGasPrice: amount})}
+                value={this.state.currentGasPrice}
+              />
 
               <Button
                 raised
+                onPress={() => {
+                  this.sendTransaction()}}
                 icon={{name: 'send'}}
                 title='SUBMIT'
                 style={{marginTop: 20}}
@@ -251,14 +283,53 @@ export default class ethereumwrapper extends Component {
            </View>
           </Modal>
 
-        <WKWebView
-          ref="webview"
-          source={{uri: 'http://127.0.0.1:8080'}}
-          injectedJavaScript={this.web3override()}
-          onMessage={this.onMessage(this)}
-        />
+          <WKWebView
+            ref={(element) => this.refs.webview = element}
+            source={{uri: this.state.uri}}
+            injectedJavaScript={this.web3override(this.state.account)}
+            onMessage={this.onMessage(this)}
+          />
       </View>
     );
+  }
+  sendTransaction(){
+    function sendToWebview(payload) {
+      console.log(payload);
+      this.refs.webview.evaluateJavaScript('masonCallbackHub(' + JSON.stringify(payload) + ')');
+    }
+
+    let infuraProvider = new Web3.providers.HttpProvider("https://ropsten.infura.io/QwECdl7hf7Pq48xrC9PI");
+    let web3 = new Web3(infuraProvider);
+    const eth = web3.eth;
+    const sign = Signer.sign;
+
+    let address = this.state.account;
+    let privateKey = this.state.privateKey;
+
+    let rawTx = this.state.currentRawTx;
+    let tag = this.state.currentTag;
+    let payloadId = this.state.currentPayloadId;
+
+    eth.getTransactionCount(address,(err, res) => {
+      nonce = res;
+      completeTx = {
+        to: rawTx.to,
+        value: rawTx.value,
+        gas: new BN(this.state.currentGasUnit),
+        data: rawTx.data,
+        // when sending a raw transactions it's necessary to set the gas price, currently 0.00000002 ETH
+        gasPrice: new BN(this.state.currentGasPrice),
+        nonce: nonce,
+      };
+
+      console.log('complete tx', completeTx);
+      console.log('signedtx', sign(completeTx, privateKey));
+      eth.sendRawTransaction(sign(completeTx, privateKey), (error, txHash) => {
+        console.log('Transaction Hash', txHash);
+        console.log('tx error', error);
+        sendToWebview({id: payloadId, result: txHash});
+      });
+    });
   }
 }
 
